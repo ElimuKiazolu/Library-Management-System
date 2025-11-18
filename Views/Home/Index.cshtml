@@ -1,0 +1,99 @@
+﻿@model MiniLibrary.Models.ViewModels.BookSearchVm
+
+@{
+    ViewBag.Title = "Library";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@* --- Simple, robust layout for search + results table --- *@
+<div class="container mt-4" style="max-width:1100px;">
+    <div class="card mb-4" style="border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06);">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-center">
+                <div class="col-md-6">
+                    @* plain input with placeholder "Search" (no model text echoing) *@
+                    <input type="search" name="q" class="form-control" placeholder="Search" value="@(Request.QueryString["q"] ?? "")" />
+                </div>
+
+                <div class="col-md-3">
+                    <select name="genre" class="form-control">
+                        <option value="">All genres</option>
+                        @* If you want server-rendered genre list, replace options with a loop *@
+                        <option>Story Book</option>
+                        <option>Adventure</option>
+                        <option>Real Life</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <select name="sort" class="form-control">
+                        <option value="alpha">Alphabetical</option>
+                        <option value="newest">Newest</option>
+                        <option value="oldest">Oldest</option>
+                    </select>
+                </div>
+
+                <div class="col-md-1 text-end">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* Results card *@
+    <div class="card" style="border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.04);">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Library</h4>
+                <small class="text-muted">Showing @((Model?.Results != null) ? Model.Results.Count() : 0) items</small>
+            </div>
+
+            @if (Model?.Results == null || !Model.Results.Any())
+            {
+                <div class="p-4 text-muted">No books found. Add some from the admin panel.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Title</th>
+                                <th>Author</th>
+                                <th style="width:90px">Year</th>
+                                <th>Genre</th>
+                                <th style="width:140px">ISBN</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var b in Model.Results)
+                            {
+                                <tr>
+                                    <td>@Html.Encode(b.Title)</td>
+                                    <td>@Html.Encode(b.Author)</td>
+                                    <td>@(b.Year.HasValue ? b.Year.ToString() : "-")</td>
+                                    <td>@Html.Encode(b.Genre ?? "-")</td>
+                                    <td>@(string.IsNullOrWhiteSpace(b.ISBN) ? "-" : Html.Encode(b.ISBN))</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section scripts {
+    @* Keep this single scripts section only — don't nest other sections inside it. *@
+    <script>
+        // small UX: when user focuses search, remove any leading/trailing whitespace
+        (function () {
+            var inp = document.querySelector('input[name="q"]');
+            if (!inp) return;
+            inp.addEventListener('blur', function () {
+                this.value = this.value.trim();
+            });
+        })();
+    </script>
+}

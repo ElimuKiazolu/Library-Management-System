@@ -1,0 +1,112 @@
+﻿using System.Linq;
+using System.Web.Mvc;
+using MiniLibrary.Models;
+using MiniLibrary.Helpers;
+using System.Net;
+
+namespace MiniLibrary.Controllers
+{
+    public class AdminController : Controller
+    {
+        private readonly LibraryContext db = new LibraryContext();
+
+        private bool IsAdminLogged => Session["AdminId"] != null;
+
+        protected override void OnActionExecuting(ActionExecutingContext filterContext)
+        {
+            var name = filterContext.ActionDescriptor.ActionName.ToLower();
+            if ((name == "createadmin" || name == "saveadmin") == false && !IsAdminLogged)
+            {
+                filterContext.Result = RedirectToAction("Login", "Account");
+                return;
+            }
+            base.OnActionExecuting(filterContext);
+        }
+
+        public ActionResult Index()
+        {
+            var vms = db.Books.OrderByDescending(b => b.CreatedAt).ToList();
+            return View(vms);
+        }
+
+        [HttpGet]
+        public ActionResult CreateAdmin()
+        {
+            return View();
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult SaveAdmin(string name, string email, string password)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
+                return new HttpStatusCodeResult(HttpStatusCode.BadRequest, "Name and password required");
+
+            var salt = SecurityHelper.GenerateSalt();
+            var hash = SecurityHelper.HashPassword(password, salt);
+
+            db.Admins.Add(new Admin { Name = name, Email = email, PasswordSalt = salt, PasswordHash = hash });
+            db.SaveChanges();
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult AddBook(Book model)
+        {
+            if (!ModelState.IsValid) return RedirectToAction("Index");
+            db.Books.Add(model);
+            db.SaveChanges();
+            return RedirectToAction("Index");
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult DeleteBook(int id)
+        {
+            var b = db.Books.Find(id);
+            if (b != null) { db.Books.Remove(b); db.SaveChanges(); }
+            return RedirectToAction("Index");
+        }
+    }
+    [HttpGet]
+        public ActionResult CreateAdmin()
+        {
+            // if an admin already exists optionally redirect to login or dashboard
+            if (db.Admins.Any())
+            {
+                // optional: redirect to login if admin exists
+                return RedirectToAction("Login", "Account");
+            }
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult SaveAdmin(string name, string email, string password)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(password))
+            {
+                ModelState.AddModelError("", "Name and password are required.");
+                return View("CreateAdmin");
+            }
+
+            var salt = SecurityHelper.GenerateSalt();
+            var hash = SecurityHelper.HashPassword(password, salt);
+
+            var admin = new Admin
+            {
+                Name = name.Trim(),
+                Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim(),
+                PasswordSalt = salt,
+                PasswordHash = hash
+            };
+
+            db.Admins.Add(admin);
+            db.SaveChanges();
+
+            // automatically log in newly created admin
+            Session["AdminId"] = admin.Id;
+            Session["AdminName"] = admin.Name;
+
+            return RedirectToAction("Index", "Admin");
+        }
+
+    }

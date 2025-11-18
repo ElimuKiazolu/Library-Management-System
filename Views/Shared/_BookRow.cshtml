@@ -1,0 +1,8 @@
+﻿@model MiniLibrary.Models.Book
+<tr class="book-row">
+    <td>@Html.Encode(Model.Title)</td>
+    <td>@Html.Encode(Model.Author)</td>
+    <td>@Model.Year</td>
+    <td>@Html.Encode(Model.Genre)</td>
+    <td>@Html.Encode(Model.ISBN)</td>
+</tr>
